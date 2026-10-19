@@ -1,0 +1,130 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package quickchatapp;
+
+/**
+ *
+ * @author Student
+ */
+
+public class Login {
+
+    // Stores the user's registration information.
+    String firstName;
+    String lastName;
+    String username;
+    String password;
+    String cellphone;
+
+    // Stores the username and password entered during login.
+    private String loginUsername;
+    private String loginPassword;
+
+    // Tracks whether the user has registered successfully.
+    private boolean registered;
+
+    // Constructor: initializes the user's registration details.
+    public Login(String firstName, String lastName,
+                 String username, String password,
+                 String cellphone) {
+
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.username = username;
+        this.password = password;
+        this.cellphone = cellphone;
+
+        // The user is not registered until validation succeeds.
+        this.registered = false;
+    }
+
+    // Checks that the username contains an underscore
+    // and is no longer than five characters.
+    public boolean checkUserName() {
+        return username != null
+                && username.length() <= 5
+                && username.contains("_");
+    }
+
+    // Checks that the password meets the complexity requirements:
+    // at least eight characters, one uppercase letter,
+    // one number and one special character.
+    public boolean checkPasswordComplexity() {
+
+        // Reject a missing password.
+        if (password == null) {
+            return false;
+        }
+
+        return password.length() >= 8
+                && password.matches(".*[A-Z].*")
+                && password.matches(".*[0-9].*")
+                && password.matches(".*[^a-zA-Z0-9].*");
+    }
+
+    // Validates the South African cellphone number format:
+    // +27 followed by exactly nine digits.
+    public boolean checkCellPhoneNumber() {
+        return cellphone != null
+                && cellphone.matches("^\\+27[0-9]{9}$");
+    }
+
+    // Validates the registration details and returns
+    // an appropriate message describing the result.
+    public String registerUser() {
+
+        // Validate the username first.
+        if (!checkUserName()) {
+            return "Username is not correctly formatted, please "
+                    + "ensure that your username contains an underscore "
+                    + "and is no more than five characters in length.";
+        }
+
+        // Validate the password complexity.
+        if (!checkPasswordComplexity()) {
+            return "Password is not correctly formatted; please ensure "
+                    + "that the password contains at least eight "
+                    + "characters, a capital letter, a number "
+                    + "and a special character.";
+        }
+
+        // Validate the cellphone number.
+        if (!checkCellPhoneNumber()) {
+            return "Cell phone number is incorrectly formatted "
+                    + "or does not contain the international code.";
+        }
+
+        // Mark the user as registered after all checks pass.
+        registered = true;
+
+        return "User has been registered successfully.";
+    }
+
+    // Saves the username and password entered at login.
+    public void setLoginDetails(String username, String password) {
+        this.loginUsername = username;
+        this.loginPassword = password;
+    }
+
+    // Checks whether the user registered successfully
+    // and entered the correct username and password.
+    public boolean loginUser() {
+        return registered
+                && username.equals(loginUsername)
+                && password.equals(loginPassword);
+    }
+
+    // Returns a welcome message when login succeeds,
+    // or an error message when the credentials are incorrect.
+    public String returnLoginStatus() {
+
+        if (loginUser()) {
+            return "Welcome " + firstName + " " + lastName
+                    + ", it is great to see you again.";
+        }
+
+        return "Username or password incorrect, please try again.";
+    }
+}
