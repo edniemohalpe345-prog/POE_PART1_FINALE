@@ -2,8 +2,11 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
+
+
 package quickchatapp;
 
+// Import classes for file handling, JSON storage, collections and random IDs.
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,41 +15,62 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
-/**
- *
- * @author Student
- */
-public class Message {
 
+public final class Message {
+
+    // Maximum number of characters allowed in a message.
     private static final int MESSAGE_LIMIT = 250;
-    private static final Path JSON_FILE = Paths.get("messages.json");
 
-    private static final List<Message> SENT_MESSAGES = new ArrayList<>();
+    // Default JSON file used to store messages.
+    private static final Path DEFAULT_JSON_FILE =
+            Paths.get("messages.json");
+
+    // Stores all messages successfully sent during this session.
+    private static final List<Message> SENT_MESSAGES =
+            new ArrayList<>();
+
+    // Tracks the total number of messages successfully sent.
     private static int totalMessagesSent = 0;
 
-    private final String messageID;
-    private final int messageNumber;
-    private String recipient;
-    private String messageText;
-    private String messageHash;
-    private int selectedAction;
+    // Variables containing the details of an individual message.
+     String messageID;
+     int messageNumber;
+     String recipient;
+     String messageText;
+     String messageHash;
+     Path jsonFile;
+     int selectedAction = 0;
 
+    // Constructor that generates a random 10-digit message ID.
     public Message(int messageNumber, String recipient,
                    String messageText) {
-        this(generateMessageID(), messageNumber, recipient, messageText);
+        this(generateMessageID(), messageNumber, recipient,
+                messageText, DEFAULT_JSON_FILE);
     }
 
-    // Constructor for testing valid and invalid message IDs.
+    // Constructor that accepts an existing message ID.
     public Message(String messageID, int messageNumber,
                    String recipient, String messageText) {
+        this(messageID, messageNumber, recipient,
+                messageText, DEFAULT_JSON_FILE);
+    }
+
+    // Constructor used by tests to specify a temporary JSON file.
+    Message(String messageID, int messageNumber,
+            String recipient, String messageText, Path jsonFile) {
         this.messageID = messageID;
         this.messageNumber = messageNumber;
         this.recipient = recipient;
         this.messageText = messageText;
+        this.jsonFile = jsonFile;
+
+        // Generate the message hash.
         this.messageHash = createMessageHash();
     }
 
+    // Generates a random message ID containing exactly 10 digits.
     private static String generateMessageID() {
         long id = ThreadLocalRandom.current()
                 .nextLong(1_000_000_000L, 10_000_000_000L);
@@ -54,14 +78,16 @@ public class Message {
         return Long.toString(id);
     }
 
+    // Checks that the message ID contains exactly 10 digits.
     public boolean checkMessageID() {
         return messageID != null
-                && messageID.matches("[0-9]{1,10}");
+                && messageID.matches("[0-9]{10}");
     }
 
+    // Validates the South African cellphone number.
     public String checkRecipientCell() {
         if (recipient != null
-                && recipient.matches("\\+27[0-9]{9}")) {
+                && recipient.matches("^\\+27[0-9]{9}$")) {
             return "Cell phone number successfully captured.";
         }
 
@@ -70,19 +96,24 @@ public class Message {
                 + "and try again.";
     }
 
+    // Checks whether the message contains no more than 250 characters.
     public String checkMessageLength() {
         if (messageText != null
                 && messageText.length() <= MESSAGE_LIMIT) {
             return "Message ready to send.";
         }
 
+        // Calculate how many characters exceed the limit.
         int length = messageText == null ? 0 : messageText.length();
         int extraCharacters = Math.max(0, length - MESSAGE_LIMIT);
 
-        return "Message exceeds 250 characters by " + extraCharacters
+        return "Message exceeds 250 characters by "
+                + extraCharacters
                 + " characters; please reduce message length.";
     }
 
+    // Creates a hash using the first two ID digits, message number,
+    // first word and last word of the message.
     public String createMessageHash() {
         String firstTwoIDNumbers = "00";
 
@@ -93,66 +124,76 @@ public class Message {
         String firstWord = "";
         String lastWord = "";
 
-        if (messageText != null && !messageText.trim().isEmpty()) {
+        // Extract the first and last words when text is available.
+        if (messageText != null
+                && !messageText.trim().isEmpty()) {
             String[] words = messageText.trim().split("\\s+");
 
             firstWord = cleanWord(words[0]);
             lastWord = cleanWord(words[words.length - 1]);
         }
 
+        // Return the hash in uppercase.
         return firstTwoIDNumbers + ":"
                 + messageNumber + ":"
-                + (firstWord + lastWord).toUpperCase();
+                + firstWord.toUpperCase(Locale.ROOT)
+                + lastWord.toUpperCase(Locale.ROOT);
     }
 
+    // Removes punctuation and symbols from a word.
     private String cleanWord(String word) {
         return word.replaceAll("[^A-Za-z0-9]", "");
     }
 
+    // Updates the recipient cellphone number.
     public void setRecipient(String recipient) {
         this.recipient = recipient;
     }
 
+    // Updates the message text and recalculates the hash.
     public void setMessageText(String messageText) {
         this.messageText = messageText;
         this.messageHash = createMessageHash();
     }
 
+    // Accepts an action number and processes the selected action.
     public String SentMessage(int action) {
+        if (action < 1 || action > 3) {
+            return "Invalid message option.";
+        }
+
         this.selectedAction = action;
         return SentMessage();
     }
 
+    // Validates and processes the selected message action.
     public String SentMessage() {
-
         if (!checkMessageID()) {
             return "Message ID is not correctly formatted.";
         }
 
-        String recipientStatus = checkRecipientCell();
-
-        if (!recipientStatus.equals(
+        if (!checkRecipientCell().equals(
                 "Cell phone number successfully captured.")) {
-            return recipientStatus;
+            return checkRecipientCell();
         }
 
-        String lengthStatus = checkMessageLength();
-
-        if (!lengthStatus.equals("Message ready to send.")) {
-            return lengthStatus;
+        if (!checkMessageLength().equals("Message ready to send.")) {
+            return checkMessageLength();
         }
 
+        // Action 1: Send the message.
         if (selectedAction == 1) {
             SENT_MESSAGES.add(this);
             totalMessagesSent++;
-
             return "Message successfully sent.";
         }
 
+        // Action 2: Disregard the message.
         if (selectedAction == 2) {
             return "Press 0 to delete the message.";
         }
 
+        // Action 3: Store the message in a JSON file.
         if (selectedAction == 3) {
             return storeMessages();
         }
@@ -160,8 +201,8 @@ public class Message {
         return "Invalid message option.";
     }
 
+    // Displays all successfully sent messages.
     public String printMessage() {
-
         if (SENT_MESSAGES.isEmpty()) {
             return "No messages have been sent yet.";
         }
@@ -169,7 +210,9 @@ public class Message {
         StringBuilder output = new StringBuilder();
 
         for (Message sentMessage : SENT_MESSAGES) {
-            output.append("Message ID: ")
+            output.append("Message Number: ")
+                    .append(sentMessage.messageNumber)
+                    .append("\nMessage ID: ")
                     .append(sentMessage.messageID)
                     .append("\nMessage Hash: ")
                     .append(sentMessage.messageHash)
@@ -183,32 +226,39 @@ public class Message {
         return output.toString().trim();
     }
 
+    // Returns the total number of messages sent.
     public int returnTotalMessages() {
         return totalMessagesSent;
     }
 
+    // Returns the total sent-message count.
     public static int getTotalSentCount() {
         return totalMessagesSent;
     }
 
+    // Saves the current message to a JSON file.
     public String storeMessages() {
-
         String existingJson = "";
 
         try {
-            if (Files.exists(JSON_FILE)) {
+            // Read existing JSON data if the file exists.
+            if (Files.exists(jsonFile)) {
                 existingJson = new String(
-                        Files.readAllBytes(JSON_FILE),
+                        Files.readAllBytes(jsonFile),
                         StandardCharsets.UTF_8
                 ).trim();
             }
 
+            // Convert the message to a JSON object.
             String newObject = toJsonObject();
             String updatedJson;
 
-            if (existingJson.isEmpty() || existingJson.equals("[]")) {
+            // Create a new JSON array if the file is empty.
+            if (existingJson.isEmpty()
+                    || existingJson.equals("[]")) {
                 updatedJson = "[\n  " + newObject + "\n]\n";
 
+            // Append the message if the existing file is a JSON array.
             } else if (existingJson.startsWith("[")
                     && existingJson.endsWith("]")) {
 
@@ -219,17 +269,16 @@ public class Message {
                 updatedJson = "[\n  "
                         + existingEntries
                         + (existingEntries.isEmpty() ? "" : ",")
-                        + "\n  "
-                        + newObject
-                        + "\n]\n";
+                        + "\n  " + newObject + "\n]\n";
 
             } else {
                 return "Could not store the message: messages.json is not "
                         + "a valid JSON array.";
             }
 
+            // Write the updated JSON data to the file.
             Files.write(
-                    JSON_FILE,
+                    jsonFile,
                     updatedJson.getBytes(StandardCharsets.UTF_8),
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING,
@@ -243,6 +292,7 @@ public class Message {
         }
     }
 
+    // Converts the message details into a JSON object.
     private String toJsonObject() {
         return "{\n"
                 + "    \"messageID\": \"" + escapeJson(messageID) + "\",\n"
@@ -253,8 +303,8 @@ public class Message {
                 + "  }";
     }
 
+    // Escapes special characters so the stored JSON remains valid.
     private String escapeJson(String value) {
-
         if (value == null) {
             return "";
         }
@@ -265,63 +315,50 @@ public class Message {
             char character = value.charAt(i);
 
             switch (character) {
-                case '"':
-                    escaped.append("\\\"");
-                    break;
+                case '"' -> escaped.append("\\\"");
+                case '\\' -> escaped.append("\\\\");
+                case '\n' -> escaped.append("\\n");
+                case '\r' -> escaped.append("\\r");
+                case '\t' -> escaped.append("\\t");
 
-                case '\\':
-                    escaped.append("\\\\");
-                    break;
-
-                case '\n':
-                    escaped.append("\\n");
-                    break;
-
-                case '\r':
-                    escaped.append("\\r");
-                    break;
-
-                case '\t':
-                    escaped.append("\\t");
-                    break;
-
-                case '\b':
-                    escaped.append("\\b");
-                    break;
-
-                case '\f':
-                    escaped.append("\\f");
-                    break;
-
-                default:
+                default -> {
                     if (character < 0x20) {
                         escaped.append(String.format(
-                                "\\u%04x", (int) character));
+                                Locale.ROOT,
+                                "\\u%04x",
+                                (int) character
+                        ));
                     } else {
                         escaped.append(character);
                     }
+                }
             }
         }
 
         return escaped.toString();
     }
 
+    // Returns the message ID.
     public String getMessageID() {
         return messageID;
     }
 
+    // Returns the message number.
     public int getMessageNumber() {
         return messageNumber;
     }
 
+    // Returns the recipient cellphone number.
     public String getRecipient() {
         return recipient;
     }
 
+    // Returns the message text.
     public String getMessageText() {
         return messageText;
     }
 
+    // Returns the message hash.
     public String getMessageHash() {
         return messageHash;
     }
