@@ -3,8 +3,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 
-
-package quickchatapp;
+package poe.part3_poe_finale;
 
 // Import classes for file handling, JSON storage, collections and random IDs.
 import java.io.IOException;
