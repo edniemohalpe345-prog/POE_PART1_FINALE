@@ -2,8 +2,10 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package quickchatapp;
 
+package poe.part3_poe_finale;
+
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Scanner;
 
@@ -12,15 +14,14 @@ import java.util.Scanner;
  *
  * @author Student
  */
-
-
 public class QuickChatApp {
 
     private static final Scanner INPUT = new Scanner(System.in);
-    private static Path jsonFile;
+    private static final Path jsonFile = Path.of("messages.json");
 
     public static void main(String[] args) {
 
+        // REGISTRATION
         System.out.println("REGISTRATION");
 
         System.out.print("FirstName: ");
@@ -39,7 +40,11 @@ public class QuickChatApp {
         String cellphone = INPUT.nextLine().trim();
 
         Login user = new Login(
-                firstName, lastName, username, password, cellphone
+                firstName,
+                lastName,
+                username,
+                password,
+                cellphone
         );
 
         String registrationResult = user.registerUser();
@@ -47,6 +52,7 @@ public class QuickChatApp {
 
         if (!registrationResult.equals(
                 "User has been registered successfully.")) {
+
             System.out.println(
                     "Registration failed. The chat application "
                     + "cannot continue."
@@ -54,6 +60,7 @@ public class QuickChatApp {
             return;
         }
 
+        // LOGIN
         System.out.println("\nLOGIN");
 
         System.out.print("userName: ");
@@ -64,13 +71,32 @@ public class QuickChatApp {
 
         user.setLoginDetails(loginUsername, loginPassword);
 
-        if (!user.loginUser()) {
-            System.out.println(user.returnLoginStatus());
+        String loginStatus = user.returnLoginStatus();
+
+        if (!loginStatus.startsWith("Welcome ")) {
+            System.out.println(loginStatus);
             return;
         }
 
+        System.out.println(loginStatus);
         System.out.println("Welcome to QuickChat.");
 
+        // LOAD STORED MESSAGES
+        StoredMessages storedMessages;
+
+        try {
+            storedMessages = new StoredMessages(jsonFile);
+
+        } catch (IOException exception) {
+
+            System.out.println(
+                    "Could not load messages.json: "
+                    + exception.getMessage()
+            );
+            return;
+        }
+
+        // ASK HOW MANY MESSAGES THE USER WANTS TO ENTER
         int messageLimit = readPositiveNumber(
                 "How many messages would you like to enter? "
         );
@@ -78,42 +104,60 @@ public class QuickChatApp {
         int messagesEntered = 0;
         boolean running = true;
 
+        // MAIN MENU
         while (running) {
 
             showMenu();
 
-            int option = readOption("Choose an option: ", 1, 3);
+            int option = readOption(
+                    "Choose an option: ",
+                    1,
+                    4
+            );
 
             switch (option) {
 
                 case 1 -> {
+
                     if (messagesEntered >= messageLimit) {
+
                         System.out.println(
                                 "You have entered the maximum number "
-                                        + "of messages for this session."
+                                + "of messages for this session."
                         );
+
                     } else {
-                        createAndProcessMessage(messagesEntered);
+
+                        // Message numbering starts at 1.
+                        createAndProcessMessage(
+                                messagesEntered + 1,
+                                storedMessages
+                        );
+
                         messagesEntered++;
                     }
                 }
 
                 case 2 -> {
-                    Message recentMessages =
-                            new Message("", 0, "", "First message", jsonFile);
 
                     System.out.println("\nRECENTLY SENT MESSAGES");
-                    System.out.println(
-                            recentMessages.printMessage()
-                    );
+
+                    // Display messages that were successfully sent.
+                    Message recentMessages =
+                            new Message(1, "", "First message");
+
+                    System.out.println(recentMessages.printMessage());
                 }
 
                 case 3 -> running = false;
+
+                case 4 -> storedMessages.showStoredMessagesMenu(INPUT);
 
                 default -> System.out.println("Invalid option.");
             }
         }
 
+        // DISPLAY TOTAL SENT MESSAGES
         System.out.println(
                 "Total messages sent: "
                 + Message.getTotalSentCount()
@@ -122,18 +166,29 @@ public class QuickChatApp {
         System.out.println("Goodbye.");
     }
 
+    // DISPLAY MAIN MENU
     private static void showMenu() {
+
         System.out.println("\nQUICKCHAT MENU");
         System.out.println("1) Send Messages");
         System.out.println("2) Show recently sent messages");
         System.out.println("3) Quit");
+        System.out.println("4) Stored Messages");
     }
 
-    private static void createAndProcessMessage(int messageNumber) {
+    // CREATE AND PROCESS A MESSAGE
+    private static void createAndProcessMessage(
+            int messageNumber,
+            StoredMessages storedMessages) {
 
-        Message message = new Message("", messageNumber, "", "First message", jsonFile);
+        // Automatically generate a 10-digit message ID.
+        Message message = new Message(
+                messageNumber,
+                "",
+                "First message"
+        );
 
-        // Validate recipient cellphone number.
+        // VALIDATE RECIPIENT CELLPHONE NUMBER
         while (true) {
 
             System.out.print(
@@ -143,15 +198,17 @@ public class QuickChatApp {
             message.setRecipient(INPUT.nextLine().trim());
 
             String result = message.checkRecipientCell();
+
             System.out.println(result);
 
             if (result.equals(
                     "Cell phone number successfully captured.")) {
+
                 break;
             }
         }
 
-        // Validate message length.
+        // VALIDATE MESSAGE LENGTH
         while (true) {
 
             System.out.print(
@@ -161,13 +218,16 @@ public class QuickChatApp {
             message.setMessageText(INPUT.nextLine());
 
             String result = message.checkMessageLength();
+
             System.out.println(result);
 
             if (result.equals("Message ready to send.")) {
+
                 break;
             }
         }
 
+        // DISPLAY MESSAGE INFORMATION
         System.out.println("\nMessage ID: "
                 + message.getMessageID());
 
@@ -180,26 +240,53 @@ public class QuickChatApp {
         System.out.println("Message: "
                 + message.getMessageText());
 
+        // MESSAGE OPTIONS
         System.out.println("\nChoose what to do with this message:");
+
         System.out.println("1) Send Message");
         System.out.println("2) Disregard Message");
         System.out.println("3) Store Message in JSON file");
 
-        int action = readOption("Choose an option: ", 1, 3);
+        int action = readOption(
+                "Choose an option: ",
+                1,
+                3
+        );
 
         String result = message.SentMessage(action);
+
         System.out.println(result);
 
+        // UPDATE STORED MESSAGES
+        try {
+
+            storedMessages.addMessage(message, action);
+
+        } catch (IOException exception) {
+
+            System.out.println(
+                    "Could not update messages.json: "
+                    + exception.getMessage()
+            );
+        }
+
+        // DISPLAY SENT MESSAGES
         if (action == 1 && result.equals(
                 "Message successfully sent.")) {
+
             System.out.println("\nSent messages:");
+
             System.out.println(message.printMessage());
         }
 
-        System.out.println("Total messages sent: "
-                + Message.getTotalSentCount());
+        // DISPLAY TOTAL SENT MESSAGES
+        System.out.println(
+                "Total messages sent: "
+                + Message.getTotalSentCount()
+        );
     }
 
+    // READ A POSITIVE NUMBER
     private static int readPositiveNumber(String prompt) {
 
         while (true) {
@@ -216,8 +303,11 @@ public class QuickChatApp {
         }
     }
 
+    // VALIDATE MENU OPTIONS
     private static int readOption(
-            String prompt, int minimum, int maximum) {
+            String prompt,
+            int minimum,
+            int maximum) {
 
         while (true) {
 
@@ -234,14 +324,17 @@ public class QuickChatApp {
         }
     }
 
+    // READ AN INTEGER
     private static int readNumber(String prompt) {
 
         while (true) {
 
             System.out.print(prompt);
+
             String entered = INPUT.nextLine();
 
             try {
+
                 return Integer.parseInt(entered.trim());
 
             } catch (NumberFormatException exception) {
@@ -253,4 +346,3 @@ public class QuickChatApp {
         }
     }
 }
-
