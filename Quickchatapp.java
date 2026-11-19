@@ -48,6 +48,7 @@ public class QuickChatApp {
         );
 
         String registrationResult = user.registerUser();
+
         System.out.println(registrationResult);
 
         if (!registrationResult.equals(
@@ -85,6 +86,7 @@ public class QuickChatApp {
         StoredMessages storedMessages;
 
         try {
+
             storedMessages = new StoredMessages(jsonFile);
 
         } catch (IOException exception) {
@@ -96,7 +98,7 @@ public class QuickChatApp {
             return;
         }
 
-        // ASK HOW MANY MESSAGES THE USER WANTS TO ENTER
+        // ASK HOW MANY MESSAGES TO ENTER
         int messageLimit = readPositiveNumber(
                 "How many messages would you like to enter? "
         );
@@ -117,6 +119,7 @@ public class QuickChatApp {
 
             switch (option) {
 
+                // SEND MESSAGE
                 case 1 -> {
 
                     if (messagesEntered >= messageLimit) {
@@ -128,29 +131,47 @@ public class QuickChatApp {
 
                     } else {
 
-                        // Message numbering starts at 1.
-                        createAndProcessMessage(
+                        boolean processed = createAndProcessMessage(
                                 messagesEntered + 1,
                                 storedMessages
                         );
 
-                        messagesEntered++;
+                        if (processed) {
+                            messagesEntered++;
+                        }
                     }
                 }
 
+                // DISPLAY RECENTLY SENT MESSAGES
                 case 2 -> {
 
                     System.out.println("\nRECENTLY SENT MESSAGES");
 
-                    // Display messages that were successfully sent.
-                    Message recentMessages =
-                            new Message(1, "", "First message");
+                    String[] sentMessages =
+                            storedMessages.getSentMessages();
 
-                    System.out.println(recentMessages.printMessage());
+                    if (sentMessages.length == 0) {
+
+                        System.out.println(
+                                "No messages have been sent yet."
+                        );
+
+                    } else {
+
+                        for (int i = 0;
+                                i < sentMessages.length; i++) {
+
+                            System.out.println(
+                                    (i + 1) + ". " + sentMessages[i]
+                            );
+                        }
+                    }
                 }
 
+                // QUIT
                 case 3 -> running = false;
 
+                // STORED MESSAGES
                 case 4 -> storedMessages.showStoredMessagesMenu(INPUT);
 
                 default -> System.out.println("Invalid option.");
@@ -159,7 +180,7 @@ public class QuickChatApp {
 
         // DISPLAY TOTAL SENT MESSAGES
         System.out.println(
-                "Total messages sent: "
+                "\nTotal messages sent: "
                 + Message.getTotalSentCount()
         );
 
@@ -176,19 +197,18 @@ public class QuickChatApp {
         System.out.println("4) Stored Messages");
     }
 
-    // CREATE AND PROCESS A MESSAGE
-    private static void createAndProcessMessage(
+    // CREATE AND PROCESS MESSAGE
+    private static boolean createAndProcessMessage(
             int messageNumber,
             StoredMessages storedMessages) {
 
-        // Automatically generate a 10-digit message ID.
         Message message = new Message(
                 messageNumber,
                 "",
                 "First message"
         );
 
-        // VALIDATE RECIPIENT CELLPHONE NUMBER
+        // VALIDATE RECIPIENT
         while (true) {
 
             System.out.print(
@@ -227,7 +247,7 @@ public class QuickChatApp {
             }
         }
 
-        // DISPLAY MESSAGE INFORMATION
+        // DISPLAY MESSAGE DETAILS
         System.out.println("\nMessage ID: "
                 + message.getMessageID());
 
@@ -257,7 +277,7 @@ public class QuickChatApp {
 
         System.out.println(result);
 
-        // UPDATE STORED MESSAGES
+        // SAVE MESSAGE
         try {
 
             storedMessages.addMessage(message, action);
@@ -268,9 +288,11 @@ public class QuickChatApp {
                     "Could not update messages.json: "
                     + exception.getMessage()
             );
+
+            return false;
         }
 
-        // DISPLAY SENT MESSAGES
+        // DISPLAY SENT MESSAGE
         if (action == 1 && result.equals(
                 "Message successfully sent.")) {
 
@@ -284,9 +306,11 @@ public class QuickChatApp {
                 "Total messages sent: "
                 + Message.getTotalSentCount()
         );
+
+        return true;
     }
 
-    // READ A POSITIVE NUMBER
+    // READ POSITIVE NUMBER
     private static int readPositiveNumber(String prompt) {
 
         while (true) {
@@ -324,7 +348,7 @@ public class QuickChatApp {
         }
     }
 
-    // READ AN INTEGER
+    // READ INTEGER
     private static int readNumber(String prompt) {
 
         while (true) {
